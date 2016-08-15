@@ -66,11 +66,8 @@ class Calibrator:
 
     def __init__(self):
     #Here we can put some default variables for deadzone, targetzone and pollingTime and PID parameters
-        self.pParameter = 2.0/100
-        self.iParameter = 1.0/10000000
-        self.dParameter = 0.0
-        self.targetXController = finkenPID.PIDController(self.pParameter, self.iParameter, self.dParameter) #I set it to zero here for zero control
-        self.targetYController = finkenPID.PIDController(self.pParameter, self.iParameter, self.dParameter)
+        self.targetXController = finkenPID.PIDController(0.02, 0.0000001, 0) #I set it to zero here for zero control
+        self.targetYController = finkenPID.PIDController(0.02, 0.0000001, 0)
         self.internalXController = finkenPID.PIDController(0.005, 0.0000001/4, 0)
         self.internalYController = finkenPID.PIDController(0.005, 0.0000001/4, 0)
         self.copterXPos = 1 #Just to test
@@ -250,37 +247,18 @@ class Calibrator:
         """
         if (self.isInInternalZone(errorX,errorY)):
             logger.debug("in safe zone")
-            if (self.inInternalZone == False):
-                if (self.accumulateIter != 0):
-                    self.accumulateX /= self.accumulateIter
-                    self.accumulateY /= self.accumulateIter
-                    logger.debug("accX: " +str(self.accumulateX))
-                    logger.debug("accY: " +str(self.accumulateY))
-                self.sendParametersToCopter(0, -0, 0)
-                self.targetXController.reset()
-                self.targetYController.reset()
-                self.targetXController.p /= 4
-                self.targetXController.i /= 4
-                self.targetYController.p /= 4
-                self.targetYController.i /= 4
-            self.inInternalZone = True            
-            calRollToSend = self.targetXController.step(errorY,self.pollingTime)*(math.pi/180)
-            calPitchToSend = self.targetYController.step(errorX, self.pollingTime)*(math.pi/180)
+            self.inInternalZone = True
+            calRollToSend = self.internalXController.step(errorY,self.pollingTime)*(math.pi/180)
+            calPitchToSend = self.internalYController.step(errorX, self.pollingTime)*(math.pi/180)
             self.myIvyCalNode.IvySendCalib(self.aircraftID, 58, -calRollToSend)
             self.myIvyCalNode.IvySendCalib(self.aircraftID, 59, calPitchToSend)
-            logger.debug("Sending calib pitch: %f / roll %f" % (calPitchToSend, -calRollToSend))
-            self.accumulateX = self.accumulateX + calPitchToSend
-            self.accumulateY = self.accumulateY + calRollToSend
-            self.accumulateIter += 1
-            
+            logger.debug("Sending pitch: %f / roll %f" % (calPitchToSend, -calRollToSend))
             return
-        elif (self.inInternalZone):                
+        elif (self.inInternalZone):
             self.inInternalZone = False
             logger.debug("Exiting internal zone")
-            self.targetXController.p *= 4
-            self.targetXController.i *= 4
-            self.targetYController.p *= 4
-            self.targetYController.i *= 4
+            self.targetXController.reset()
+            self.targetYController.reset()
 
         logger.debug('ErrorX: '+str(errorX)+' ErrorY: '+str(errorY))
 
