@@ -66,11 +66,8 @@ class Calibrator:
 
     def __init__(self):
     #Here we can put some default variables for deadzone, targetzone and pollingTime and PID parameters
-        self.pParameter = 2.0/100
-        self.iParameter = 1.0/10000000
-        self.dParameter = 0.0
-        self.targetXController = finkenPID.PIDController(self.pParameter, self.iParameter, self.dParameter) #I set it to zero here for zero control
-        self.targetYController = finkenPID.PIDController(self.pParameter, self.iParameter, self.dParameter)
+        self.targetXController = finkenPID.PIDController(0.02, 0.0000001, 0) #I set it to zero here for zero control
+        self.targetYController = finkenPID.PIDController(0.02, 0.0000001, 0)
         self.internalXController = finkenPID.PIDController(0.005, 0.0000001/4, 0)
         self.internalYController = finkenPID.PIDController(0.005, 0.0000001/4, 0)
         self.copterXPos = 1 #Just to test
@@ -90,11 +87,6 @@ class Calibrator:
         self.accumulateIter = 0
         self.accumulateXAvg = 0
         self.accumulateYAvg = 0
-        self.bestPitch = 0
-        self.bestRoll = 0
-        self.copterXOld = 0
-        self.copterYOld = 0
-        self.absDiff = 1000
     
     #Important INIT
     def setBasePosition(self, posX, posY):
@@ -255,53 +247,18 @@ class Calibrator:
         """
         if (self.isInInternalZone(errorX,errorY)):
             logger.debug("in safe zone")
-            if (self.inInternalZone == False):
-                self.sendParametersToCopter(0, -0, 0)
-                self.targetXController.reset()
-                self.targetYController.reset()
-                self.targetXController.p /= 4
-                self.targetXController.i /= 4
-                self.targetYController.p /= 4
-                self.targetYController.i /= 4
-                self.accumulateIter = 0
-            if (self.accumulateIter == 0):  #reset positioning memory and calib average
-                self.accumulateX = 0
-                self.accumulateY = 0
-                self.copterXOld = self.copterXPos
-                self.copterYOld = self.copterYPos
-            self.inInternalZone = True            
-            calRollToSend = self.targetXController.step(errorY,self.pollingTime)*(math.pi/180)
-            calPitchToSend = self.targetYController.step(errorX, self.pollingTime)*(math.pi/180)
+            self.inInternalZone = True
+            calRollToSend = self.internalXController.step(errorY,self.pollingTime)*(math.pi/180)
+            calPitchToSend = self.internalYController.step(errorX, self.pollingTime)*(math.pi/180)
             self.myIvyCalNode.IvySendCalib(self.aircraftID, 58, -calRollToSend)
             self.myIvyCalNode.IvySendCalib(self.aircraftID, 59, calPitchToSend)
-            logger.debug("Sending calib pitch: %f / roll %f" % (calPitchToSend, -calRollToSend))
-            self.accumulateX = self.accumulateX + calPitchToSend
-            self.accumulateY = self.accumulateY + calRollToSend
-            self.accumulateIter += 1
-            if (self.accumulateIter >= 100):
-                logger.debug("calculating movement..")
-                self.accumulateIter = 0
-                logger.debug("movement last iteration: " +str(self.absDiff))
-                self.Xdiff = math.fabs(self.copterXPos - self.copterXOld)
-                self.Ydiff = math.fabs(self.copterYPos - self.copterYOld)
-                if (self.absDiff > (self.Xdiff + self.Ydiff)):                    
-                    self.absDiff = self.Xdiff + self.Ydiff
-                    logger.debug("movement this iteration: " +str(self.absDiff))
-                    self.bestPitch = self.accumulateX/100
-                    self.bestRoll = self.accumulateY/100
-                    logger.debug("best average parameters: [" +str(self.bestPitch) +"] " +str(self.bestRoll))
-                self.accumulateIter = 0
-                
-                
-            
+            logger.debug("Sending pitch: %f / roll %f" % (calPitchToSend, -calRollToSend))
             return
-        elif (self.inInternalZone):                
+        elif (self.inInternalZone):
             self.inInternalZone = False
             logger.debug("Exiting internal zone")
-            self.targetXController.p *= 4
-            self.targetXController.i *= 4
-            self.targetYController.p *= 4
-            self.targetYController.i *= 4
+            self.targetXController.reset()
+            self.targetYController.reset()
 
         logger.debug('ErrorX: '+str(errorX)+' ErrorY: '+str(errorY))
 
@@ -361,7 +318,7 @@ myCalibrator.sendStartMode() #I uncommented this for simulation purposes
 time.sleep(1.75) #When the copter turns on, there are no lights until a few seconds
 
 i = 0;
-while(i<=1000/0.05):
+while(i<=10000000):
     myCalibrator.getXYCoordinates()
     if (myCalibrator.isInDeadZone()):
         myCalibrator.killCopter()
@@ -373,11 +330,7 @@ while(i<=1000/0.05):
     myCalibrator.followTarget()
     i=i+1
     time.sleep(myCalibrator.pollingTime)
-
-myCalibrator.sendParametersToCopter(0, 0, 0)
-myCalibrator.myIvyCalNode.IvySendCalib(myCalibrator.aircraftID, 58, -myCalibrator.bestRoll)
-myCalibrator.myIvyCalNode.IvySendCalib(myCalibrator.aircraftID, 59, myCalibrator.bestPitch)
-time.sleep(1)
+    
 myCalibrator.myIvyCalNode.IvySendSwitchBlock(myCalibrator.aircraftID,myCalibrator.landingBlockInteger)
 time.sleep(2)
 myCalibrator.killCopter()
