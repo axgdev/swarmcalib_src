@@ -1,8 +1,8 @@
-#swarmcalib
+# swarmcalib
 Swarm Calibration project
 
-#Paparazzi, Ground station side:
-###(Parallel task to Camera side)
+# Paparazzi, Ground station side:
+### (Parallel task to Camera side)
 1.  Go into the git "calib" branch of paparazzi:
      Changes of the paparazzi branch include
         - Killing copter through Ivy without remote control overriding it.
@@ -29,8 +29,8 @@ Swarm Calibration project
     settings -> body2imu. These parameters will be automatically
     modified by the calibration script.
 
-#Camera side:
-###(Parallel task to Paparazzi)
+# Camera side:
+### (Parallel task to Paparazzi)
 Please note ROS needs to be installed, in the swarmlab desktop it is
 already installed.
 
@@ -41,8 +41,8 @@ already installed.
 
 Camera should be running at this point.
 
-#Calibration script side:
-###(After Camera and Paparazzi running)
+# Calibration script side:
+### (After Camera and Paparazzi running)
 Please note ROS needs to be installed. In the finken laptop it is
 installed under the catkin_workspace folder in the home folder. The
 instruction step 1 applies to the laptop.
@@ -55,7 +55,7 @@ That's it! If the camera is working correctly, the calibration should
 be getting data, and trying to correct the copter position and finding
 calibration parameters
 
-#Explanation of scripts:
+# Explanation of scripts:
  * CalibrationV2.py: Class where all the calibration methods are contained
   we have tried to make all the calls to the ivyNode independent so that this
   calibration script can be used in other scenarios such as simulation.
@@ -78,11 +78,11 @@ calibration parameters
  With that you can add listeners to regular expressions and see incoming data
  or send data.
 
-##Some other comments and observations during our work:
+## Some other comments and observations during our work:
 An additional dummy parameter was necessary to be added to the direction
 messages for a very strange and obscure error that occurs when all the
 parameters are float, I think the first one has to be an integer
-#(Note to self: CHECK THIS)
+# (Note to self: CHECK THIS)
 
 Sometimes the copter initial flight does not work. For these cases, make
 sure that before you start the calibration script in the GCS the state
